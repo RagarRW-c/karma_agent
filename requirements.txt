@@ -11,3 +11,9 @@ python-dotenv
 
 playwright
 redis
+
+celery[redis]==5.3.1
+redis==4.6.0
+
+# 🤖 AI Agent dependencies (NEW!)
+httpx>=0.25.0  # For Anthropic API calls

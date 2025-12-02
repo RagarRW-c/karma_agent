@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐱 Karma Agent - Monitor Cen</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .deals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .deal-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .deal-card:hover {
+            transform: scale(1.05);
+        }
+
+        .deal-badge {
+            background: rgba(255,255,255,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .deal-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .deal-price {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .deal-shop {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f8f9ff;
+        }
+
+        .price-cell {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .best-price {
+            background: #10b981;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: #667eea;
+        }
+
+        .error {
+            background: #fee;
+            border: 2px solid #f88;
+            padding: 20px;
+            border-radius: 10px;
+            color: #c00;
+            margin: 20px 0;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+
+        .last-update {
+            text-align: right;
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .deals-grid {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐱 Karma Agent</h1>
+            <p class="subtitle">Inteligentny monitoring cen karmy dla kotów</p>
+            <button class="refresh-btn" onclick="loadAllData()">🔄 Odśwież dane</button>
+        </header>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Monitorowanych produktów</div>
+                <div class="stat-value" id="productCount">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Najlepsza oferta</div>
+                <div class="stat-value" id="bestDealPrice">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Średnia cena</div>
+                <div class="stat-value" id="avgPrice">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Śledzone sklepy</div>
+                <div class="stat-value" id="shopCount">-</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔥 Najlepsze Oferty</h2>
+            <div id="dealsContainer" class="loading">Ładowanie najlepszych ofert...</div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Aktualne Ceny</h2>
+            <div id="pricesContainer" class="loading">Ładowanie cen produktów...</div>
+        </div>
+
+        <div class="section">
+            <h2>📈 Wykres Trendów Cenowych</h2>
+            <div class="chart-container">
+                <canvas id="priceChart"></canvas>
+            </div>
+        </div>
+
+        <div class="last-update">
+            Ostatnia aktualizacja: <span id="lastUpdate">-</span>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let priceChart = null;
+
+        async function fetchAPI(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                throw error;
+            }
+        }
+
+        async function loadBestDeals() {
+            try {
+                const deals = await fetchAPI('/analytics/best-deals?limit=6');
+                const container = document.getElementById('dealsContainer');
+                
+                if (deals.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">Brak ofert poniżej ceny docelowej. Dodaj produkty z ceną docelową!</p>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="deals-grid">
+                        ${deals.map(deal => `
+                            <div class="deal-card">
+                                <div class="deal-badge">-${deal.discount_percent}%</div>
+                                <div class="deal-title">${deal.brand || ''} ${deal.product_name}</div>
+                                <div class="deal-price">${deal.current_price.toFixed(2)} PLN</div>
+                                <div class="deal-shop">📍 ${deal.shop_name}</div>
+                                <div style="margin-top: 10px; opacity: 0.8; font-size: 0.85em;">
+                                    Cena docelowa: ${deal.target_price.toFixed(2)} PLN
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                // Update stats
+                if (deals.length > 0) {
+                    document.getElementById('bestDealPrice').textContent = 
+                        `${deals[0].current_price.toFixed(2)} PLN`;
+                }
+            } catch (error) {
+                document.getElementById('dealsContainer').innerHTML = 
+                    '<div class="error">Błąd ładowania ofert. Sprawdź czy backend działa.</div>';
+            }
+        }
+
+        async function loadCurrentPrices() {
+            try {
+                const products = await fetchAPI('/analytics/current-prices');
+                const container = document.getElementById('pricesContainer');
+                
+                if (products.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">Brak produktów. Dodaj produkty przez API!</p>';
+                    return;
+                }
+
+                let totalPrice = 0;
+                let priceCount = 0;
+                const shops = new Set();
+
+                products.forEach(product => {
+                    product.prices.forEach(price => {
+                        totalPrice += price.price;
+                        priceCount++;
+                        shops.add(price.shop_name);
+                    });
+                });
+
+                // Update stats
+                document.getElementById('productCount').textContent = products.length;
+                document.getElementById('avgPrice').textContent = 
+                    priceCount > 0 ? `${(totalPrice / priceCount).toFixed(2)} PLN` : '-';
+                document.getElementById('shopCount').textContent = shops.size;
+
+                container.innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produkt</th>
+                                <th>Marka</th>
+                                <th>Waga</th>
+                                <th>Sklepy</th>
+                                <th>Najniższa cena</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${products.map(product => `
+                                <tr>
+                                    <td><strong>${product.name}</strong></td>
+                                    <td>${product.brand || '-'}</td>
+                                    <td>${product.weight_grams ? product.weight_grams + 'g' : '-'}</td>
+                                    <td>
+                                        ${product.prices.map(p => `
+                                            <div style="margin: 5px 0;">
+                                                ${p.shop_name}: <span style="color: #667eea; font-weight: bold;">${p.price.toFixed(2)} PLN</span>
+                                            </div>
+                                        `).join('')}
+                                    </td>
+                                    <td class="price-cell">
+                                        ${product.min_price !== null 
+                                            ? `<span class="best-price">${product.min_price.toFixed(2)} PLN</span>`
+                                            : '-'
+                                        }
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                document.getElementById('pricesContainer').innerHTML = 
+                    '<div class="error">Błąd ładowania cen. Sprawdź czy backend działa.</div>';
+            }
+        }
+
+        async function loadPriceChart() {
+            try {
+                const products = await fetchAPI('/analytics/current-prices');
+                
+                if (products.length === 0) return;
+
+                // Wybierz pierwszy produkt z danymi
+                const productWithPrices = products.find(p => p.prices.length > 0);
+                if (!productWithPrices) return;
+
+                const history = await fetchAPI(`/analytics/price-history/${productWithPrices.id}?days=30`);
+                
+                if (history.length === 0) return;
+
+                // Grupuj po datach i sklepach
+                const dataByShop = {};
+                history.forEach(snapshot => {
+                    const shopId = snapshot.shop_id;
+                    if (!dataByShop[shopId]) {
+                        dataByShop[shopId] = {
+                            label: `Sklep ${shopId}`,
+                            data: [],
+                            borderColor: getRandomColor(),
+                            tension: 0.3
+                        };
+                    }
+                    dataByShop[shopId].data.push({
+                        x: new Date(snapshot.created_at),
+                        y: snapshot.price
+                    });
+                });
+
+                const ctx = document.getElementById('priceChart');
+                if (priceChart) {
+                    priceChart.destroy();
+                }
+
+                priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: Object.values(dataByShop)
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Historia cen: ${productWithPrices.name}`,
+                                font: { size: 16 }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Data'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Cena (PLN)'
+                                },
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading chart:', error);
+            }
+        }
+
+        function getRandomColor() {
+            const colors = [
+                '#667eea', '#764ba2', '#f093fb', '#4facfe',
+                '#43e97b', '#fa709a', '#fee140', '#30cfd0'
+            ];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        async function loadAllData() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString('pl-PL');
+            await Promise.all([
+                loadBestDeals(),
+                loadCurrentPrices(),
+                loadPriceChart()
+            ]);
+        }
+
+        // Auto-refresh co 5 minut
+        setInterval(loadAllData, 5 * 60 * 1000);
+
+        // Initial load
+        loadAllData();
+    </script>
+</body>
+</html>
