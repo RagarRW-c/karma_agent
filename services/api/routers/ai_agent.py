@@ -3,7 +3,7 @@ AI Agent Router - Updated with REAL SCRAPING support
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from services.ai_agent.agent import AIAgent

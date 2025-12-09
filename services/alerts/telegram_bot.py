@@ -1,6 +1,6 @@
+"""Telegram Alert Service"""
 import os
 import httpx
-from datetime import datetime
 
 
 class TelegramBot:
@@ -22,13 +22,30 @@ class TelegramBot:
         if not self.is_configured():
             return False
         try:
-            message = f"🔥 OBNIŻKA!\n\n📦 {product_name}\n🏪 {shop_name}\n\n💵 {old_price:.2f} → {new_price:.2f} PLN\n📉 -{discount_percent:.1f}%\n\n🔗 {url}"
-            api_url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
+            message = (
+                "🔥 OBNIŻKA!\n\n"
+                "📦 {0}\n🏪 {1}\n\n"
+                "💵 {2:.2f} → {3:.2f} PLN\n"
+                "📉 -{4:.1f}%\n\n🔗 {5}"
+            ).format(
+                product_name,
+                shop_name,
+                old_price,
+                new_price,
+                discount_percent,
+                url
+            )
+            api_url = (
+                "https://api.telegram.org/bot{0}/sendMessage"
+            ).format(self.bot_token)
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(api_url, json={"chat_id": self.chat_id, "text": message})
+                response = await client.post(
+                    api_url,
+                    json={"chat_id": self.chat_id, "text": message}
+                )
                 return response.status_code == 200
         except Exception as e:
-            print(f"[TELEGRAM] Error: {e}")
+            print("[TELEGRAM] Error: {0}".format(e))
             return False
 
 

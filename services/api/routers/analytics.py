@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
 
 from services.api.db import get_db
 from services.api import models
