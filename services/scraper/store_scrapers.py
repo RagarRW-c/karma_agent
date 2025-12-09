@@ -1,10 +1,7 @@
-"""
-Real Store Scrapers - Scrape actual prices from Polish pet stores
-"""
+"""Real Store Scrapers"""
 
-import asyncio
-from typing import Optional, Dict, List
-from playwright.async_api import async_playwright, Page, TimeoutError as PlaywrightTimeoutError
+from typing import Optional, Dict
+from playwright.async_api import async_playwright
 import re
 from decimal import Decimal
 
@@ -16,10 +13,7 @@ class StoreScraperBase:
         self.store_name = store_name
 
     async def scrape_price(self, url: str) -> Optional[Dict]:
-        """
-        Scrape price from store
-        Returns: {"price": Decimal, "currency": str, "available": bool} or None
-        """
+        """Scrape price from store"""
         raise NotImplementedError("Subclasses must implement scrape_price")
 
     def _extract_price_from_text(self, text: str) -> Optional[Decimal]:
@@ -27,18 +21,13 @@ class StoreScraperBase:
         if not text:
             return None
 
-        # Remove all non-numeric except comma and dot
         cleaned = re.sub(r'[^\d,.]', '', text)
-
-        # Replace comma with dot
         cleaned = cleaned.replace(',', '.')
-
-        # Extract first number
         match = re.search(r'\d+\.?\d*', cleaned)
         if match:
             try:
                 return Decimal(match.group())
-            except BaseException:
+            except Exception:
                 return None
         return None
 
@@ -53,7 +42,8 @@ class ZooplusScraper(StoreScraperBase):
     async def search_product(self, product_name: str) -> Optional[str]:
         """Search for product and return first result URL"""
         search_query = product_name.replace(' ', '+')
-        search_url = f"{self.base_url}/search?query={search_query}"
+        search_url = "{0}/search?query={1}".format(
+            self.base_url, search_query)
 
         try:
             async with async_playwright() as p:
@@ -61,9 +51,8 @@ class ZooplusScraper(StoreScraperBase):
                 page = await browser.new_page()
 
                 await page.goto(search_url, timeout=30000)
-                await page.wait_for_timeout(2000)  # Wait for JavaScript
+                await page.wait_for_timeout(2000)
 
-                # Try to find first product link
                 selectors = [
                     'a.product-link',
                     'a[data-zta="product_link"]',
@@ -80,26 +69,28 @@ class ZooplusScraper(StoreScraperBase):
                                 if href.startswith('http'):
                                     product_url = href
                                 else:
-                                    product_url = f"{self.base_url}{href}"
+                                    product_url = "{0}{1}".format(
+                                        self.base_url, href)
 
                                 await browser.close()
-                                print(
-                                    f"[{self.store_name}] Found product: {product_url}")
+                                print("[{0}] Found: {1}".format(
+                                    self.store_name, product_url))
                                 return product_url
-                    except BaseException:
+                    except Exception:
                         continue
 
                 await browser.close()
-                print(f"[{self.store_name}] No product found for: {product_name}")
+                print("[{0}] No product found for: {1}".format(
+                    self.store_name, product_name))
                 return None
 
         except Exception as e:
-            print(f"[{self.store_name}] Search error: {e}")
+            print("[{0}] Search error: {1}".format(self.store_name, e))
             return None
 
     async def scrape_price(self, url: str) -> Optional[Dict]:
         """Scrape price from Zooplus product page"""
-        print(f"[{self.store_name}] Scraping: {url}")
+        print("[{0}] Scraping: {1}".format(self.store_name, url))
 
         try:
             async with async_playwright() as p:
@@ -109,13 +100,11 @@ class ZooplusScraper(StoreScraperBase):
                 await page.goto(url, timeout=30000)
                 await page.wait_for_timeout(2000)
 
-                # Try multiple price selectors (Zooplus changes them often)
                 price_selectors = [
                     '[data-zta="productPrice"]',
                     '.price-main',
                     '.product-price',
                     '[class*="price"]',
-                    '[data-testid="product-price"]',
                 ]
 
                 price_text = None
@@ -124,10 +113,10 @@ class ZooplusScraper(StoreScraperBase):
                         element = await page.locator(selector).first
                         if await element.count() > 0:
                             price_text = await element.text_content()
-                            if price_text and any(c.isdigit()
-                                                  for c in price_text):
+                            if price_text and any(
+                                    c.isdigit() for c in price_text):
                                 break
-                    except BaseException:
+                    except Exception:
                         continue
 
                 await browser.close()
@@ -135,7 +124,8 @@ class ZooplusScraper(StoreScraperBase):
                 if price_text:
                     price = self._extract_price_from_text(price_text)
                     if price:
-                        print(f"[{self.store_name}] Found price: {price} PLN")
+                        print("[{0}] Found price: {1} PLN".format(
+                            self.store_name, price))
                         return {
                             "price": price,
                             "currency": "PLN",
@@ -143,11 +133,12 @@ class ZooplusScraper(StoreScraperBase):
                             "url": url
                         }
 
-                print(f"[{self.store_name}] Could not extract price")
+                print("[{0}] Could not extract price".format(
+                    self.store_name))
                 return None
 
         except Exception as e:
-            print(f"[{self.store_name}] Error: {e}")
+            print("[{0}] Error: {1}".format(self.store_name, e))
             return None
 
 
@@ -161,7 +152,7 @@ class KakaduScraper(StoreScraperBase):
     async def search_product(self, product_name: str) -> Optional[str]:
         """Search for product on Kakadu"""
         search_query = product_name.replace(' ', '+')
-        search_url = f"{self.base_url}/szukaj?q={search_query}"
+        search_url = "{0}/szukaj?q={1}".format(self.base_url, search_query)
 
         try:
             async with async_playwright() as p:
@@ -171,7 +162,6 @@ class KakaduScraper(StoreScraperBase):
                 await page.goto(search_url, timeout=30000)
                 await page.wait_for_timeout(2000)
 
-                # Find first product
                 selectors = [
                     '.product-item a',
                     'article a[href*="/produkt/"]',
@@ -184,25 +174,28 @@ class KakaduScraper(StoreScraperBase):
                         if await first_link.count() > 0:
                             href = await first_link.get_attribute('href')
                             if href:
-                                product_url = f"{self.base_url}{href}" if not href.startswith(
-                                    'http') else href
+                                if not href.startswith('http'):
+                                    product_url = "{0}{1}".format(
+                                        self.base_url, href)
+                                else:
+                                    product_url = href
                                 await browser.close()
-                                print(
-                                    f"[{self.store_name}] Found: {product_url}")
+                                print("[{0}] Found: {1}".format(
+                                    self.store_name, product_url))
                                 return product_url
-                    except BaseException:
+                    except Exception:
                         continue
 
                 await browser.close()
                 return None
 
         except Exception as e:
-            print(f"[{self.store_name}] Search error: {e}")
+            print("[{0}] Search error: {1}".format(self.store_name, e))
             return None
 
     async def scrape_price(self, url: str) -> Optional[Dict]:
         """Scrape price from Kakadu"""
-        print(f"[{self.store_name}] Scraping: {url}")
+        print("[{0}] Scraping: {1}".format(self.store_name, url))
 
         try:
             async with async_playwright() as p:
@@ -228,127 +221,30 @@ class KakaduScraper(StoreScraperBase):
                                     price_text)
                                 if price:
                                     await browser.close()
-                                    print(
-                                        f"[{self.store_name}] Found price: {price} PLN")
+                                    print("[{0}] Found price: {1} PLN".format(
+                                        self.store_name, price))
                                     return {
                                         "price": price,
                                         "currency": "PLN",
                                         "available": True,
                                         "url": url
                                     }
-                    except BaseException:
+                    except Exception:
                         continue
 
                 await browser.close()
                 return None
 
         except Exception as e:
-            print(f"[{self.store_name}] Error: {e}")
+            print("[{0}] Error: {1}".format(self.store_name, e))
             return None
 
 
-class MaxiZooScraper(StoreScraperBase):
-    """Scraper for MaxiZoo.pl"""
-
-    def __init__(self):
-        super().__init__("MaxiZoo")
-        self.base_url = "https://www.maxizoo.pl"
-
-    async def search_product(self, product_name: str) -> Optional[str]:
-        """Search for product on MaxiZoo"""
-        search_query = product_name.replace(' ', '+')
-        search_url = f"{self.base_url}/search?text={search_query}"
-
-        try:
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                page = await browser.new_page()
-
-                await page.goto(search_url, timeout=30000)
-                await page.wait_for_timeout(2000)
-
-                selectors = [
-                    '.product-tile a',
-                    'a[href*="/p/"]',
-                    '.product-item a',
-                ]
-
-                for selector in selectors:
-                    try:
-                        first_link = await page.locator(selector).first
-                        if await first_link.count() > 0:
-                            href = await first_link.get_attribute('href')
-                            if href:
-                                product_url = f"{self.base_url}{href}" if not href.startswith(
-                                    'http') else href
-                                await browser.close()
-                                print(
-                                    f"[{self.store_name}] Found: {product_url}")
-                                return product_url
-                    except BaseException:
-                        continue
-
-                await browser.close()
-                return None
-
-        except Exception as e:
-            print(f"[{self.store_name}] Search error: {e}")
-            return None
-
-    async def scrape_price(self, url: str) -> Optional[Dict]:
-        """Scrape price from MaxiZoo"""
-        print(f"[{self.store_name}] Scraping: {url}")
-
-        try:
-            async with async_playwright() as p:
-                browser = await p.chromium.launch(headless=True)
-                page = await browser.new_page()
-
-                await page.goto(url, timeout=30000)
-                await page.wait_for_timeout(2000)
-
-                price_selectors = [
-                    '.product-price',
-                    '[class*="price"]',
-                    '.price-value',
-                ]
-
-                for selector in price_selectors:
-                    try:
-                        element = await page.locator(selector).first
-                        if await element.count() > 0:
-                            price_text = await element.text_content()
-                            if price_text:
-                                price = self._extract_price_from_text(
-                                    price_text)
-                                if price:
-                                    await browser.close()
-                                    print(
-                                        f"[{self.store_name}] Found price: {price} PLN")
-                                    return {
-                                        "price": price,
-                                        "currency": "PLN",
-                                        "available": True,
-                                        "url": url
-                                    }
-                    except BaseException:
-                        continue
-
-                await browser.close()
-                return None
-
-        except Exception as e:
-            print(f"[{self.store_name}] Error: {e}")
-            return None
-
-
-# Factory to get scraper by store name
 def get_scraper(store_name: str) -> Optional[StoreScraperBase]:
     """Get scraper instance by store name"""
     scrapers = {
         "zooplus": ZooplusScraper,
         "kakadu": KakaduScraper,
-        "maxizoo": MaxiZooScraper,
     }
 
     scraper_class = scrapers.get(store_name.lower())
