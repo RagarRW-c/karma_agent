@@ -31,15 +31,15 @@ def get_price_history(
         raise HTTPException(status_code=404, detail="Product not found")
 
     date_from = datetime.utcnow() - timedelta(days=days)
-    
+
     query = db.query(models.PriceSnapshot).filter(
         models.PriceSnapshot.product_id == product_id,
         models.PriceSnapshot.created_at >= date_from
     )
-    
+
     if shop_id:
         query = query.filter(models.PriceSnapshot.shop_id == shop_id)
-    
+
     snapshots = query.order_by(models.PriceSnapshot.created_at).all()
     return snapshots
 
@@ -51,7 +51,7 @@ def get_current_prices(db: Session = Depends(get_db)):
     """
     products = db.query(models.Product).all()
     result = []
-    
+
     for product in products:
         # Pobierz najnowszą cenę dla każdego sklepu
         latest_prices = (
@@ -68,7 +68,7 @@ def get_current_prices(db: Session = Depends(get_db)):
             .distinct(models.PriceSnapshot.shop_id)
             .all()
         )
-        
+
         prices = [
             {
                 "shop_id": p.shop_id,
@@ -79,10 +79,10 @@ def get_current_prices(db: Session = Depends(get_db)):
             }
             for p in latest_prices
         ]
-        
+
         # Znajdź najniższą cenę
         min_price = min([p["price"] for p in prices]) if prices else None
-        
+
         result.append({
             "id": product.id,
             "name": product.name,
@@ -93,7 +93,7 @@ def get_current_prices(db: Session = Depends(get_db)):
             "min_price": min_price,
             "price_count": len(prices)
         })
-    
+
     return result
 
 
@@ -107,7 +107,7 @@ def get_best_deals(
     """
     products = db.query(models.Product).filter(models.Product.target_price_pln.isnot(None)).all()
     deals = []
-    
+
     for product in products:
         # Pobierz najnowszą najniższą cenę
         latest_price = (
@@ -116,17 +116,17 @@ def get_best_deals(
             .order_by(desc(models.PriceSnapshot.created_at))
             .first()
         )
-        
+
         if not latest_price:
             continue
-        
+
         current_price = float(latest_price.price)
         target_price = float(product.target_price_pln)
-        
+
         if current_price <= target_price:
             shop = db.query(models.Shop).filter(models.Shop.id == latest_price.shop_id).first()
             discount_percent = ((target_price - current_price) / target_price) * 100
-            
+
             deals.append({
                 "product_id": product.id,
                 "product_name": product.name,
@@ -138,7 +138,7 @@ def get_best_deals(
                 "discount_percent": round(discount_percent, 2),
                 "updated_at": latest_price.created_at
             })
-    
+
     # Sortuj po największym rabacie
     deals.sort(key=lambda x: x["discount_percent"], reverse=True)
     return deals[:limit]
@@ -159,7 +159,7 @@ def get_price_trends(
         raise HTTPException(status_code=404, detail="Product not found")
 
     date_from = datetime.utcnow() - timedelta(days=days)
-    
+
     snapshots = (
         db.query(models.PriceSnapshot)
         .filter(
@@ -169,29 +169,29 @@ def get_price_trends(
         .order_by(models.PriceSnapshot.created_at)
         .all()
     )
-    
+
     if not snapshots:
         raise HTTPException(status_code=404, detail="No price data available")
-    
+
     prices = [float(s.price) for s in snapshots]
     avg_price = sum(prices) / len(prices)
     min_price = min(prices)
     max_price = max(prices)
-    
+
     # Prosty trend - porównanie pierwszych i ostatnich 3 dni
     first_week = prices[:len(prices)//3] if len(prices) > 9 else prices[:3]
     last_week = prices[-len(prices)//3:] if len(prices) > 9 else prices[-3:]
-    
+
     avg_first = sum(first_week) / len(first_week)
     avg_last = sum(last_week) / len(last_week)
-    
+
     if avg_last < avg_first * 0.95:
         trend = "falling"
     elif avg_last > avg_first * 1.05:
         trend = "rising"
     else:
         trend = "stable"
-    
+
     return {
         "product_id": product_id,
         "product_name": product.name,

@@ -2,15 +2,23 @@ import os
 import httpx
 from datetime import datetime
 
+
 class TelegramBot:
     def __init__(self):
         self.bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
         self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    
+
     def is_configured(self):
         return bool(self.bot_token and self.chat_id)
-    
-    async def send_price_drop_alert(self, product_name, shop_name, old_price, new_price, url, discount_percent):
+
+    async def send_price_drop_alert(
+            self,
+            product_name,
+            shop_name,
+            old_price,
+            new_price,
+            url,
+            discount_percent):
         if not self.is_configured():
             return False
         try:
@@ -22,5 +30,6 @@ class TelegramBot:
         except Exception as e:
             print(f"[TELEGRAM] Error: {e}")
             return False
+
 
 telegram_bot = TelegramBot()
