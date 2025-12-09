@@ -54,3 +54,4 @@ test.txt
 # Virtual environment
 .venv/
 venv/
+*.backup

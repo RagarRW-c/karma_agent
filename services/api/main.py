@@ -11,6 +11,7 @@ from services.api.routers.shops import router as shops_router
 from services.api.routers.shop_products import router as shop_products_router
 from services.api.routers.analytics import router as analytics_router
 from services.api.routers.ai_agent import router as ai_agent_router
+from services.api.routers.alerts import router as alerts_router
 
 
 app = FastAPI(
@@ -148,3 +149,4 @@ app.include_router(shops_router)
 app.include_router(shop_products_router)
 app.include_router(analytics_router)
 app.include_router(ai_agent_router)  # 🤖 NEW: AI Agent router
+app.include_router(alerts_router)  # Alerts

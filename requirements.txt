@@ -17,3 +17,4 @@ redis==4.6.0
 
 # 🤖 AI Agent dependencies (NEW!)
 httpx>=0.25.0  # For Anthropic API calls
+redis>=4.0.0,<5.0.0
